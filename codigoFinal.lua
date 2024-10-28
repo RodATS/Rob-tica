@@ -370,10 +370,10 @@ function sysCall_actuation()
             
         --acabo de medir todo, la torreta ya escaneo todo    
         elseif turretAngleTarget + turretAngleDeltaRad >= (math.pi - 0.01) then
-            print("Cantidad de paredes detectadas: ",  #distanceMeasurements)
+            print("Cantidad de objetos detectados: ",  #distanceMeasurements)
             for j=1, #distanceMeasurements do
              -- Calculo del likehood con las mediciones del sensor por cada particula por cada pared detectada
-                print("Medida Pared ",j," :",distanceMeasurements[j])
+                print("Distancia al objeto ",j," :",distanceMeasurements[j])
             end
             --reiniciar las mediciones del sensor
             distanceMeasurements = {}
