@@ -262,8 +262,32 @@ function sysCall_init()
   
   
        
-    -- Your code here!
+    -- Your code here!-------------------
+    --AGREGADOOOOOOOOOO-------------------------
+    -- Which step are we in?
+    -- 0 is a dummy value which is immediately completed
+    stepCounter = 0
+    stepCompletedFlag = false
     
+    
+    stepList = {}
+    stepList[1] = {"medir_paredes"}
+    stepList[2] = {"stop"}
+    stepList[3] = {"repeat"}
+    
+    --torreta
+    sensorStandardDeviation = 0.1
+    sensorVariance = sensorStandardDeviation^2
+    noisyDistance = 0
+    --Determina la diferencia entre angulos consecutivos cuando la torreta gira
+    turretAngleDeltaRad = math.rad(10)
+    turretAngleTarget = -(math.pi - 0.01)
+    sim.setJointTargetPosition(turretMotor, turretAngleTarget)
+    
+    -- Record a series of measurements to update particles together (only need to resample once)
+    distanceMeasurements = {}
+    turretAngleRads = {}
+    --FIN AGREGADOOOOOOOOOOOO----------
     -- EXAMPLE: student thinks they have reached a goal
     -- reachedGoal(1, robotBase)
 
@@ -282,15 +306,90 @@ function sysCall_actuation()
     tt = sim.getSimulationTime()
     -- print("actuation hello", tt)
  
-
-    result,cleanDistance=sim.readProximitySensor(turretSensor)
-    if (result>0) then
-        noisyDistance= cleanDistance + gaussian(0.0, sensorVariance)
+    
+    --result,cleanDistance=sim.readProximitySensor(turretSensor)
+    --if (result>0) then
+        --noisyDistance= cleanDistance + gaussian(0.0, sensorVariance)
         --print ("Depth sensor reading ", noisyDistance)
+    --end
+
+
+    -- Your code here!--------------------------------------
+    --AGrEGADO-------------------------------------------------------
+    if (stepCompletedFlag == true or stepCounter == 0) then
+        stepCounter = stepCounter + 1
+        stepCompletedFlag = false
+
+        newStepType = stepList[stepCounter][1]
+
+        if (newStepType == "repeat") then
+            -- Loop back to the first step
+            stepCounter = 1
+            newStepType = stepList[stepCounter][1]
+
+            
+        
+
+            print("New step:", stepCounter, newStepType)
+
+       
+        elseif (newStepType == "stop") then
+            print("Stopping")
+        elseif (newStepType == "medir_paredes") then
+            print("Tomando medidas")
+        end
     end
 
+    -- Handle current ongoing step
+    stepType = stepList[stepCounter][1]
 
-    -- Your code here!
+    
+    if (stepType == "stop") then
+        speedBaseL = 0
+        speedBaseR = 0
+
+        
+        stepCompletedFlag = true
+        
+    elseif (stepType == "medir_paredes") then
+        
+        speedBaseL = 0
+        speedBaseR = 0
+
+        --Verificar que la pos de la torreta tenga un error minimo al objetivo
+        if math.abs(sim.getJointPosition(turretMotor) - turretAngleTarget) < 0.01 then
+            --si detecta algo la torreta
+            local result, cleanDistance = sim.readProximitySensor(turretSensor)
+            if result > 0 then
+                distanceMeasurements[#distanceMeasurements+1] = cleanDistance + gaussian(0.0, sensorVariance)
+                turretAngleRads[#turretAngleRads+1] = turretAngleTarget
+            end
+
+            --actualizar nuevo angulo objetivo de la torreta para la sig medicion
+            turretAngleTarget = turretAngleTarget + turretAngleDeltaRad
+            
+        --acabo de medir todo, la torreta ya escaneo todo    
+        elseif turretAngleTarget + turretAngleDeltaRad >= (math.pi - 0.01) then
+            print("Cantidad de paredes detectadas: ",  #distanceMeasurements)
+            for j=1, #distanceMeasurements do
+             -- Calculo del likehood con las mediciones del sensor por cada particula por cada pared detectada
+                print("Medida Pared ",j," :",distanceMeasurements[j])
+            end
+            --reiniciar las mediciones del sensor
+            distanceMeasurements = {}
+            turretAngleRads = {}
+
+            -- Reset sensor
+            turretAngleTarget = -(math.pi - 0.01)
+            sim.setJointTargetPosition(turretMotor, turretAngleTarget)
+
+            stepCompletedFlag = true
+        else
+            -- Rotar sensor torreta
+            sim.setJointTargetPosition(turretMotor, turretAngleTarget)
+        end
+    end
+    --FIN AGREGADO---------------------------------
 
 end
 
