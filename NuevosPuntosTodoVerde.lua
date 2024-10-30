@@ -382,12 +382,12 @@ function crearParticulas()
 
         xArray[i] = goals[goalIdx][1]
         yArray[i] = goals[goalIdx][2]
-        thetaArray[i] = 2*math.pi * math.random() - math.pi -- Random in range [-pi, pi]
+        thetaArray[i] = 2*math.pi * math.random() - math.pi -- [-pi, pi]
         weightArray[i] = 1.0/numberOfParticles
     end
 
     for i=1, numberOfDummes do
-        dummyArray[i] = sim.createDummy(0.05) -- Returns integer object handle
+        dummyArray[i] = sim.createDummy(0.05)
     end
 end
 
@@ -406,16 +406,12 @@ function reposicionamiento()
 end
 
 
--- Performs a particle motion prediction update for straight line motion.
--- Does not do anything if 'metersMovedSinceLastUpdate' is zero (robot did not do anything).
 function updateParticlesAfterStraightLineMotion(metersMovedSinceLastUpdate)
-    -- Don't increase uncertainty if we did not do a movement
     if (metersMovedSinceLastUpdate == 0) then
         return
     end
 
     for i=1, numberOfParticles do
-        -- Scale variances appropriately (variance is additive and determined for one meter)
         local distanceNoise = gaussian(0, straightLineXYVariance * metersMovedSinceLastUpdate)
         local rotationNoise = gaussian(0, straightLineThetaVariance * metersMovedSinceLastUpdate)
 
@@ -434,16 +430,12 @@ function updateParticlesAfterStraightLineMotion(metersMovedSinceLastUpdate)
 end
 
 
--- Performs a particle motion prediction update for pure rotation (rotation on the spot).
--- Does not do anything if 'radiansRotatedSinceLastUpdate' is zero (robot did not do anything).
 function updateParticlesAfterPureRotation(radiansRotatedSinceLastUpdate)
-    -- Don't increase uncertainty if we did not do a movement
     if (radiansRotatedSinceLastUpdate == 0) then
         return
     end
 
     for i=1, numberOfParticles do
-        -- Scale variance appropriately (variance is additive and determined for one radian)
         local rotationNoise = gaussian(0, rotationThetaVariance * math.abs(radiansRotatedSinceLastUpdate))
 
         local noisyRoationRadians = radiansRotatedSinceLastUpdate + rotationNoise
@@ -456,7 +448,6 @@ function updateParticlesAfterPureRotation(radiansRotatedSinceLastUpdate)
 end
 
 
--- Euclidean distance between two points
 function euclideanDistance(x1, y1, x2, y2)
     return math.sqrt((x1-x2)^2 + (y1-y2)^2)
 end
@@ -471,10 +462,7 @@ function PuntoEnLaLineaDeDosPuntos(x, y, Ax, Ay, Bx, By)
 end
 
 
--- (x, y, theta) is the hypthosesis of a single particle.
--- z is the sonar distance measurement.
 function calculateLikelihood(x, y, theta, z)
-    -- Compute expected depth measurement m, assuming robot pose (x, y, theta)
     local m = math.huge
     for key, wall in ipairs(walls) do
         Ax = wall[1]
@@ -489,14 +477,12 @@ function calculateLikelihood(x, y, theta, z)
             local intersectX = x + distanceToWall * math.cos(theta)
             local intersectY = y + distanceToWall * math.sin(theta)
 
-            -- Only update m if the sonar would actually hit the wall
             if (PuntoEnLaLineaDeDosPuntos(intersectX, intersectY, Ax, Ay, Bx, By)) then
                 m = distanceToWall
             end
         end
     end
 
-    -- Compute likelihood based on difference between m and z
     local likelihood = math.exp(- (z - m)^2 / (2*sensorVariance)) + sensorNoiseConstant
 
     if (m == math.huge) then
@@ -508,7 +494,7 @@ function calculateLikelihood(x, y, theta, z)
 end
 
 
--- Returns the sum of all elements in an array.
+
 function sum(array)
     local sum = 0
     for i=1, #array do
@@ -519,7 +505,6 @@ function sum(array)
 end
 
 
--- Perform particle filter normalisation step to ensure that weights add up to 1.
 function normalizacion()
     local weightSum = sum(weightArray)
     if weightSum == 0 then
@@ -591,8 +576,7 @@ function updateParticlesAfterMeasurement(distanceMeasurements, turretAngleRads)
 end
 
 
--- Takes an array of values and an array of corresponding weights.
--- Both arrays must be of the same length.
+
 function weighted_sum(values, weights)
     local sum = 0.0
     for i=1, #values do
