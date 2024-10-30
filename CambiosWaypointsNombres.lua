@@ -1,4 +1,3 @@
-
 -- Generate a sample from a Gaussian distribution
 function gaussian (mean, variance)
     return  math.sqrt(-2 * variance * math.log(math.random())) *
@@ -256,81 +255,35 @@ function sysCall_init()
     stepList[6] = {"medicion"}
     stepList[7] = {"repeat"}
 
-    -- Waypoints
     N_WAYPOINTS = 25
     WaypointInicial = -1 
     WaypointActual = -1
     finRecorrido = false
     waypoints = {}
-    --[[
-    waypoints[1] = {2,-2} -- Bottom right goal
-    waypoints[2] = {2,-1.5}
-    waypoints[3] = {2,-1}
-    waypoints[4] = {2,-0.5}
-    waypoints[5] = {2,0}
-    waypoints[6] = {2,0.5}
-    waypoints[7] = {2,1}
-    waypoints[8] = {2,1.5}
-    waypoints[9] = {2,2} -- Top right goal
-    waypoints[10] = {1.5,1.5}
-    waypoints[11] = {1,1}
-    waypoints[12] = {0.5,0.5}
-    waypoints[13] = {0,0} -- Centre goal
-    waypoints[14] = {0.6,0.6}
-    waypoints[15] = {1.25,1.25}
-    waypoints[16] = {0.6,1.25}
-    waypoints[17] = {0,1.25}
-    waypoints[18] = {-0.5,1.25}
-    waypoints[19] = {-1,1.25}
-    waypoints[20] = {-1.5,1.25}
-    waypoints[21] = {-2,1.25}
-    waypoints[22] = {-2,1.65}
-    waypoints[23] = {-2,2} -- Top left goal
-    waypoints[24] = {-2,1.5}
-    waypoints[25] = {-2,1}
-    waypoints[26] = {-2,0.5}
-    waypoints[27] = {-2,0}
-    waypoints[28] = {-2,-0.5}
-    waypoints[29] = {-2,-1} -- Bottom left goal
-    waypoints[30] = {-1.5,-1}
-    waypoints[31] = {-1,-1}
-    waypoints[32] = {-1,-1.5}
-    waypoints[33] = {-1,-1.75}
-    waypoints[34] = {-1.5,-1.75}
-    waypoints[35] = {-1.75,-1.75}
-    waypoints[36] = {-1.75,-2.25}
-    waypoints[37] = {-1.5,-2.25}
-    waypoints[38] = {-1,-2.25}
-    waypoints[39] = {-0.5,-2.25}
-    waypoints[40] = {0,-2.25}
-    waypoints[41] = {0.5,-2.25}
-    waypoints[42] = {1,-2.25}
-    waypoints[43] = {1.5,-2.25}
-    waypoints[44] = {2,-2.25} ]]--
     
     --Nuevos waypoints:
-    waypoints[1] = {2,-2} -- Bottom right goal
+    waypoints[1] = {2,-2} -- 3 goal
     waypoints[2] = {2,-1}
     waypoints[3] = {2,-0.5}
     waypoints[4] = {2,0}
-    --2,1 para mejor precisión?
+    --
     waypoints[5] = {2,1}
-    waypoints[6] = {2,2} -- Top right goal
+    waypoints[6] = {2,2} -- 4 goal
     waypoints[7] = {1.5,1.5}
-    --posible 1,1
+    --
     waypoints[8] = {1,1}
-    waypoints[9] = {0,0} -- Centre goal
+    waypoints[9] = {0,0} -- 1 goal
     waypoints[10] = {1,1}
     waypoints[11] = {0.5,1.5} 
     waypoints[12] = {-0.5, 2}
-    --punto intermediario
+    --
     waypoints[13] = {-1,1.25}
-    waypoints[14] = {-2,0.5} --Quiza cambiar
-    waypoints[15] = {-2,2} -- Top left goal
+    waypoints[14] = {-2,0.5} 
+    waypoints[15] = {-2,2} -- 2 goal
     waypoints[16] = {-2,0.5}
-    waypoints[17] = {-2,-1} -- Bottom left goal
+    waypoints[17] = {-2,-1} -- 5 goal
     waypoints[18] = {-1,-1.5}
-    waypoints[19] = {-1.5,-1.75} --Quiza cambiar
+    waypoints[19] = {-1.5,-1.75} 
     waypoints[20] = {-2,-2}
     waypoints[21] = {-1.75,-2.25}
     waypoints[22] = {-0.5,-2.25}
@@ -348,40 +301,34 @@ function sysCall_init()
     IndicesWaypointRuta[4] = 6 -- (2, 2)
     IndicesWaypointRuta[5] = 17 -- (-2, -1)
 
-    -- Determines the difference between consequtive angles that the turret
-    -- is rotated to during the measurement step (rotated -pi to pi)
     turretAngleDeltaRad = math.rad(10)
     turretAngleTarget = -2 * math.pi
     sim.setJointTargetPosition(turretMotor, turretAngleTarget)
-    
     
     contadorMedidas = 0
     MaximoMedidas = 12
     MaximoMedidasGoal = 60 -- Take more measurments at goal
 
-    -- Record a series of measurements to update particles together (only need to resample once)
+    -- Medidas para el resampleo
     distanceMeasurements = {}
     turretAngleRads = {}
-
-    -- Create and initialise arrays for particles, and display them with dummies
+    
+    --Particulas
     xArray = {}
     yArray = {}
     thetaArray = {}
     weightArray = {}
     dummyArray = {}
-    -- Both numberOfParticles and numberOfParticleSecondRound must be a multiple of N_GOALS!
     numberOfParticles = 1000
-    numberOfParticleSecondRound = 150 -- Only need lots of particles to determine initial location
+    numberOfParticleSecondRound = 150 
     numberOfDummes = numberOfParticleSecondRound
 
     crearParticulas()
     reposicionamiento()
 
-    -- Target movements for reaching the current waypoint
     waypointRotationRadians = 0.0
     waypointDistanceMeter = 0.0
 
-    -- Target positions for joints
     motorAngleTargetL = 0.0
     motorAngleTargetR = 0.0
 
@@ -644,7 +591,7 @@ function weighted_sum(values, weights)
 end
 
 
---Normalizar el ángulo para que sea 180 máximo
+--Normalizar el ?ngulo para que sea 180 m?ximo
 function normalizarAngulo(theta)
     local normalisedTheta = theta % (2.0*math.pi)
     if (normalisedTheta > math.pi) then
@@ -973,7 +920,6 @@ function sysCall_actuation()
             sim.setObjectInt32Param(turretMotor, sim.jointintparam_ctrl_enabled, 0) -- velocity control mode
             sim.setJointTargetVelocity(turretMotor, 15) --hacemos que avance a 15 radianes por segundo
             --sim.setJointTargetPosition(turretMotor, turretAngleTarget)
-            
             
             local turretAngleCurrent = sim.getJointPosition(turretMotor)
             local result, cleanDistance = sim.readProximitySensor(turretSensor)
