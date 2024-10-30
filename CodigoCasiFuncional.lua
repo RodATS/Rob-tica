@@ -1,3 +1,4 @@
+
 -- Generate a sample from a Gaussian distribution
 function gaussian (mean, variance)
     return  math.sqrt(-2 * variance * math.log(math.random())) *
@@ -215,7 +216,7 @@ function sysCall_init()
     -- goals now is an array of arrays with the {Gx, Gy} goal coordinates
 
     -- Keep track of where we started
-    startingGoal = -1
+    GoalInicial = -1
 
     -- for g=1, N_GOALS do
     --     print ("Goal" ..tostring(g).. " Gx " ..tostring(goals[g][1]).. " Gy " ..tostring(goals[g][2]))
@@ -252,13 +253,13 @@ function sysCall_init()
     stepList[3] = {"stop"} -- TODO: Experiment with removing stop steps
     stepList[4] = {"forward"}
     stepList[5] = {"stop"}
-    stepList[6] = {"measurement"}
+    stepList[6] = {"medicion"}
     stepList[7] = {"repeat"}
 
     -- Waypoints
     N_WAYPOINTS = 22
-    startingWaypoint = -1 -- Waypoint at which we start and end (determined after first measurement)
-    currentWaypoint = -1
+    WaypointInicial = -1 -- Waypoint at which we start and end (determined after first measurement)
+    WaypointActual = -1
     passedStartingWaypoint = false -- Used to differentiate start from end
     waypoints = {}
     --[[
@@ -330,6 +331,7 @@ function sysCall_init()
     waypoints[20] = {1,-2.25}
     waypoints[21] = {1.5,-2.25}
     waypoints[22] = {2,-2.25}
+
     ----------------
 
     -- Used to find waypoint associated with a goal
@@ -341,12 +343,12 @@ function sysCall_init()
     goalToWaypointMapping[5] = 29 -- (-2, -1)]]--
     
     -- Used to find waypoint associated with a goal
-    goalToWaypointMapping = {}
-    goalToWaypointMapping[1] = 7 -- (0, 0)
-    goalToWaypointMapping[2] = 12 -- (-2, 2)
-    goalToWaypointMapping[3] = 1 -- (2, -2)
-    goalToWaypointMapping[4] = 5 -- (2, 2)
-    goalToWaypointMapping[5] = 14 -- (-2, -1)
+    IndicesWaypointRuta = {}
+    IndicesWaypointRuta[1] = 7 -- (0, 0)
+    IndicesWaypointRuta[2] = 12 -- (-2, 2)
+    IndicesWaypointRuta[3] = 1 -- (2, -2)
+    IndicesWaypointRuta[4] = 5 -- (2, 2)
+    IndicesWaypointRuta[5] = 14 -- (-2, -1)
 
     -- Determines the difference between consequtive angles that the turret
     -- is rotated to during the measurement step (rotated -pi to pi)
@@ -355,9 +357,9 @@ function sysCall_init()
     sim.setJointTargetPosition(turretMotor, turretAngleTarget)
     
     
-    numberOfMeasurements = 0
-    maxNumberMeasurements = 12
-    maxNumberMeasurementsGoal = 30 -- Take more measurments at goal
+    contadorMedidas = 0
+    MaximoMedidas = 12
+    MaximoMedidasGoal = 60 -- Take more measurments at goal
 
     -- Record a series of measurements to update particles together (only need to resample once)
     distanceMeasurements = {}
@@ -375,7 +377,7 @@ function sysCall_init()
     numberOfDummes = numberOfParticleSecondRound
 
     initialiseParticles()
-    updateParticleVisualisation()
+    reposicionamiento()
 
     -- Target movements for reaching the current waypoint
     waypointRotationRadians = 0.0
@@ -435,14 +437,13 @@ function initialiseParticles()
 end
 
 
-function updateParticleVisualisation()
+function reposicionamiento()
     local j = 1
     for i=1, numberOfParticles do
         if i % (numberOfParticles / numberOfDummes) == 0 then
-           -- Args: object handle, reference frame (-1 = absolute position), coordinates (x,y,z)
-            sim.setObjectPosition(dummyArray[j], -1, {xArray[i],yArray[i],0.0})
-            -- Args: object handle, reference frame (-1 = absolute position), euler angles (alpha, beta, gamma)
-            sim.setObjectOrientation(dummyArray[j], -1, {0.0,0.0,thetaArray[i]})
+        --usar una menor cantidad de dummies
+           sim.setObjectPosition(dummyArray[j], -1, {xArray[i],yArray[i],0.0})
+           sim.setObjectOrientation(dummyArray[j], -1, {0.0,0.0,thetaArray[i]})
 
             j = j + 1
         end
@@ -472,7 +473,7 @@ function updateParticlesAfterStraightLineMotion(metersMovedSinceLastUpdate)
         thetaArray[i] = thetaArray[i] + rotationNoise
     end
 
-    updateParticleVisualisation()
+    resampleo()
 
     print("Updated particles after straight line motion")
 end
@@ -494,7 +495,7 @@ function updateParticlesAfterPureRotation(radiansRotatedSinceLastUpdate)
         thetaArray[i] = thetaArray[i] + noisyRoationRadians
     end
 
-    updateParticleVisualisation()
+    resampleo()
 
     print("Updated particles after pure rotation")
 end
@@ -506,9 +507,11 @@ function euclideanDistance(x1, y1, x2, y2)
 end
 
 
--- Returns true if the point (x, y) lies on the line between two points (Ax, Ay) and (Bx, By).
-function isPointOnLineBetweenTwoPoints(x, y, Ax, Ay, Bx, By)
-    local distanceMargin = 0.01 -- Needed for floating point errors
+-- Retornamos true si (x, y) esta en la linea entre los puntos (Ax, Ay) y (Bx, By).
+function PuntoEnLaLineaDeDosPuntos(x, y, Ax, Ay, Bx, By)
+    local distanceMargin = 0.01 
+    
+    --la suma de la distancia del punto a A y a B debe ser muy parecida a la distancia entre ambos puntos A y B
     return math.abs(euclideanDistance(Ax, Ay, x, y) + euclideanDistance(x, y, Bx, By) - euclideanDistance(Ax, Ay, Bx, By)) < distanceMargin
 end
 
@@ -518,7 +521,7 @@ end
 function calculateLikelihood(x, y, theta, z)
     -- Compute expected depth measurement m, assuming robot pose (x, y, theta)
     local m = math.huge
-    for _, wall in ipairs(walls) do
+    for key, wall in ipairs(walls) do
         Ax = wall[1]
         Ay = wall[2]
         Bx = wall[3]
@@ -527,12 +530,12 @@ function calculateLikelihood(x, y, theta, z)
         local distanceToWall = ((By - Ay)*(Ax - x) - (Bx - Ax)*(Ay - y)) / ((By - Ay)*math.cos(theta) - (Bx - Ax)*math.sin(theta))
 
         if (distanceToWall < m and distanceToWall >= 0) then
-            -- Check if the sonar should hit between the endpoint limits of the wall
+            -- sacamos los puntos en x y en y en donde intercepta en un angulo theta
             local intersectX = x + distanceToWall * math.cos(theta)
             local intersectY = y + distanceToWall * math.sin(theta)
 
             -- Only update m if the sonar would actually hit the wall
-            if (isPointOnLineBetweenTwoPoints(intersectX, intersectY, Ax, Ay, Bx, By)) then
+            if (PuntoEnLaLineaDeDosPuntos(intersectX, intersectY, Ax, Ay, Bx, By)) then
                 m = distanceToWall
             end
         end
@@ -542,7 +545,7 @@ function calculateLikelihood(x, y, theta, z)
     local likelihood = math.exp(- (z - m)^2 / (2*sensorVariance)) + sensorNoiseConstant
 
     if (m == math.huge) then
-        print("NO ACTUAL DISTANCE TO WALL FOUND")
+        print("No se encontro distancia a pared")
         likelihood = 1.0 / 100
     end
 
@@ -562,10 +565,10 @@ end
 
 
 -- Perform particle filter normalisation step to ensure that weights add up to 1.
-function normaliseParticleWeights()
+function normalizacion()
     local weightSum = sum(weightArray)
     if weightSum == 0 then
-        print("ERROR in normaliseParticleWeights: weightSum is zero")
+        print("Suma de pesos 0")
     end
 
     for i=1, #weightArray do
@@ -575,7 +578,7 @@ end
 
 
 -- Perform particle resampling using biased roulette wheel method.
-function resampleParticles()
+function resampleo()
     local cumulativeWeightArray = {weightArray[1]}
     for i=2, numberOfParticles do
         cumulativeWeightArray[i] = cumulativeWeightArray[i-1] + weightArray[i]
@@ -620,15 +623,15 @@ function updateParticlesAfterMeasurement(distanceMeasurements, turretAngleRads)
         for j=1, #distanceMeasurements do
              -- Account for turret rotation by adding turret angle to the particle's angle
             local likelihood = calculateLikelihood(xArray[i], yArray[i], thetaArray[i] + turretAngleRads[j], distanceMeasurements[j])
-            weightArray[i] = weightArray[i] * likelihood * 1000 -- Factor of 1000 to avoid too small numbers
+            weightArray[i] = weightArray[i] * likelihood 
         end
     end
 
-    normaliseParticleWeights()
+    normalizacion()
 
-    resampleParticles()
+    resampleo()
 
-    updateParticleVisualisation()
+    reposicionamiento()
 
     print("Updated particles after measurement update, normalisation, and resampling")
 end
@@ -691,7 +694,7 @@ function getMaxMotorAngleFromTarget(posL, posR)
 end
 
 
-function getClosestGoalFromCoordinates(x, y)
+function GoalMasCercano(x, y)
     local closestGoal = -1
     local minDistance = math.huge
 
@@ -706,18 +709,10 @@ function getClosestGoalFromCoordinates(x, y)
     return closestGoal
 end
 
-
-function getGoalWaypoints()
-    return {goalToWaypointMapping[1], goalToWaypointMapping[2],
-            goalToWaypointMapping[3], goalToWaypointMapping[4],
-            goalToWaypointMapping[5]}
-end
-
-
-function isWaypointGoalWaypoint(waypoint)
-    local goalWaypoints = getGoalWaypoints();
+function VerificacionWaypointGoalpoint(actual_waypoint)
+    local goalWaypoints = {IndicesWaypointRuta[1], IndicesWaypointRuta[2], IndicesWaypointRuta[3], IndicesWaypointRuta[4], IndicesWaypointRuta[5]};
     for i=1,#goalWaypoints do
-        if goalWaypoints[i] == waypoint then
+        if goalWaypoints[i] == actual_waypoint then
             return true
         end
     end
@@ -727,38 +722,21 @@ end
 function median(t)
     local temp={}
   
-    -- deep copy table so that when we sort it, the original is unchanged
-    for _,v in pairs(t) do
+    -- copiamos la tabla para ordenar la copia y que la otra quede intacta
+    for key,v in pairs(t) do
         table.insert( temp, v )
     end
   
     table.sort(temp)
   
-    -- If we have an even number of table elements or odd.
-    if math.fmod(#temp,2) == 0 then
-      -- return mean value of middle two elements
+    if math.fmod(#temp,2) == 0 then --si tenemos un numero par de elementos
+      -- retornamos el promedio de los dos elementos del medio
       return ( temp[#temp/2] + temp[(#temp/2)+1] ) / 2
     else
-      -- return middle element
+      -- si es impar, retornamos exactamente el elemento del medio
       return temp[math.ceil(#temp/2)]
     end
   end
-
-
-function pointEstimateX()
-    --return weighted_sum(xArray, weightArray)
-    return median(xArray)
-end
-
-function pointEstimateY()
-    -- return weighted_sum(yArray, weightArray)
-    return median(yArray)
-end
-
-function pointEstimateTheta()
-    -- return weighted_sum(thetaArray, weightArray)
-    return median(thetaArray)
-end
 
 
 function closeEnoughToGoal(goal)
@@ -776,7 +754,7 @@ function closeEnoughToGoal(goal)
     end
 
     -- Close enough if less than 5cm away (Use 4cm to be save)
-    return euclideanDistance(goalPos[1], goalPos[2], pointEstimateX(), pointEstimateY()) < 0.04
+    return euclideanDistance(goalPos[1], goalPos[2], median(xArray), median(yArray)) < 0.04
 end
 
 
@@ -800,47 +778,47 @@ function sysCall_actuation()
             newStepType = stepList[stepCounter][1]
 
             if (passedStartingWaypoint) then
-                if (currentWaypoint == goalToWaypointMapping[1]) then
+                if (WaypointActual == IndicesWaypointRuta[1]) then
                     if closeEnoughToGoal(1) then
-                        print("Reached goal 1")
+                        print("Llegamos a goal 1")
                         reachedGoal(1, robotBase)
                     else
-                        currentWaypoint = currentWaypoint - 1
+                        WaypointActual = WaypointActual - 1
                     end
-                elseif (currentWaypoint == goalToWaypointMapping[2]) then
+                elseif (WaypointActual == IndicesWaypointRuta[2]) then
                     if closeEnoughToGoal(2) then
-                        print("Reached goal 2")
+                        print("Llegamos a goal 2")
                         reachedGoal(2, robotBase)
                     else
-                        currentWaypoint = currentWaypoint - 1
+                        WaypointActual = WaypointActual - 1
                     end
-                elseif (currentWaypoint == goalToWaypointMapping[3]) then
+                elseif (WaypointActual == IndicesWaypointRuta[3]) then
                     if closeEnoughToGoal(3) then
-                        print("Reached goal 3")
+                        print("Llegamos a goal 3")
                         reachedGoal(3, robotBase)
                     else
-                        currentWaypoint = currentWaypoint - 1
+                        WaypointActual = WaypointActual - 1
                     end
-                elseif (currentWaypoint == goalToWaypointMapping[4]) then
+                elseif (WaypointActual == IndicesWaypointRuta[4]) then
                     if closeEnoughToGoal(4) then
-                        print("Reached goal 4")
+                        print("Llegamos a goal 4")
                         reachedGoal(4, robotBase)
                     else
-                        currentWaypoint = currentWaypoint - 1
+                        WaypointActual = WaypointActual - 1
                     end
-                elseif (currentWaypoint == goalToWaypointMapping[5]) then
+                elseif (WaypointActual == IndicesWaypointRuta[5]) then
                     if closeEnoughToGoal(5) then
-                        print("Reached goal 5")
+                        print("Llegamos a goal 5")
                         reachedGoal(5, robotBase)
                     else
-                        currentWaypoint = currentWaypoint - 1
+                        WaypointActual = WaypointActual - 1
                     end
-                elseif (currentWaypoint == N_WAYPOINTS) then
-                    currentWaypoint = 0
+                elseif (WaypointActual == N_WAYPOINTS) then
+                    WaypointActual = 0
                 end
             end
 
-            if (currentWaypoint == startingWaypoint) then
+            if (WaypointActual == WaypointInicial) then
                 if (passedStartingWaypoint) then
                     print("DESTINATION REACHED")
                     return
@@ -849,31 +827,30 @@ function sysCall_actuation()
                 end
             end
 
-            currentWaypoint = currentWaypoint + 1
+            WaypointActual = WaypointActual + 1
         end
 
         print("New step:", stepCounter, newStepType)
 
         if (newStepType == "read_waypoint") then
-            print("Waypoint is: ", currentWaypoint)
+            print("Waypoint: ", WaypointActual)
 
-            -- Read next waypoint
-            local waypoint = waypoints[currentWaypoint]
+            local waypoint = waypoints[WaypointActual]
             local goalX = waypoint[1]
             local goalY = waypoint[2]
 
-            -- Set new movement targets to reach the new waypoint
-            -- All calculations below use units meter and radian
-            local currentX = pointEstimateX()
-            local currentY = pointEstimateY()
-            local currentTheta = pointEstimateTheta()
+            local currentX = median(xArray)
+            local currentY = median(yArray)
+            local currentTheta = median(thetaArray)
 
             local deltaX = goalX - currentX
             local deltaY = goalY - currentY
-            -- Note that Lua math.atan implements atan2(dy,dx)
+            
+            -- Lua math.atan implementa atan2(dy,dx)
             local absoluteAngleToGoal = math.atan(deltaY, deltaX)
             local deltaTheta = absoluteAngleToGoal - currentTheta
-            -- Make sure that -pi < deltaTheta <= pi for efficiency
+            
+            -- -pi < deltaTheta <= pi 
             deltaTheta = normaliseThetaMinusPiToPlusPi(deltaTheta)
 
             waypointRotationRadians = deltaTheta
@@ -886,8 +863,8 @@ function sysCall_actuation()
             -- Turn step: set new targets
             motorAngleTargetL = posL - waypointRotationRadians * motorAnglePerRadian
             motorAngleTargetR = posR + waypointRotationRadians * motorAnglePerRadian
-        elseif (newStepType == "measurement") then
-            print("Taking measurements")
+        elseif (newStepType == "medicion") then
+            print("Midiendo")
         end
     end
 
@@ -898,108 +875,117 @@ function sysCall_actuation()
         -- Directly move to next step
         stepCompletedFlag = true
     elseif (stepType == "turn") then
-        -- Set wheel speed based on turn direction
         if (waypointRotationRadians >= 0) then
-            -- Left turn
+            -- Left 
             speedBaseL = -speedBase
             speedBaseR = speedBase
         else
-            -- Right turn
+            -- Right 
             speedBaseL = speedBase
             speedBaseR = -speedBase
         end
 
         local motorAngleFromTarget = getMaxMotorAngleFromTarget(posL, posR)
-        -- Slow down when close
+
         if (motorAngleFromTarget < 3) then
             local speedScaling = 0.2 + 0.8 * motorAngleFromTarget / 3
             speedBaseL = speedBaseL * speedScaling
             speedBaseR = speedBaseR * speedScaling
         end
-        -- Determine if we have reached the current step's goal
+        
         if (motorAngleFromTarget == 0.0) then
             stepCompletedFlag = true
-
-            -- Update particles
+            
             updateParticlesAfterPureRotation(waypointRotationRadians)
             waypointRotationRadians = 0.0
         end
     elseif (stepType == "forward") then
-        -- Set wheel speed
+    
         speedBaseL = speedBase
         speedBaseR = speedBase
 
         local motorAngleFromTarget = getMaxMotorAngleFromTarget(posL, posR)
-        -- Slow down when close
+        
         if (motorAngleFromTarget < 3) then
             local speedScaling = 0.2 + 0.8 * motorAngleFromTarget / 3
             speedBaseL = speedBaseL * speedScaling
             speedBaseR = speedBaseR * speedScaling
         end
-        -- Determine if we have reached the current step's goal
+
         if (motorAngleFromTarget == 0.0) then
             stepCompletedFlag = true
 
-            -- Update particles
             updateParticlesAfterStraightLineMotion(waypointDistanceMeter)
             waypointDistanceMeter = 0.0
         end
     elseif (stepType == "stop") then
-        -- Set speed to zero
         speedBaseL = 0
         speedBaseR = 0
 
-        -- Check to see if the robot is stationary to within a small threshold
+
         local linearVelocity, angularVelocity = sim.getVelocity(robotBase)
+        
+        
         local vLin = math.sqrt(linearVelocity[1]^2 + linearVelocity[2]^2 + linearVelocity[3]^2)
         local vAng = math.sqrt(angularVelocity[1]^2 + angularVelocity[2]^2 + angularVelocity[3]^2)
+        
+        
         if (vLin < 0.001 and vAng < 0.01) then
             stepCompletedFlag = true
         end
-    elseif (stepType == "measurement") then
-        -- Set speed to zero
+        
+        
+    elseif (stepType == "medicion") then
+        -- Colocamos la velocidad en cero para realizar las mediciones
         speedBaseL = 0
         speedBaseR = 0
 
-        local maxMeasurements = maxNumberMeasurements
-        if isWaypointGoalWaypoint(currentWaypoint) then
-            maxMeasurements = maxNumberMeasurementsGoal
+        --Definir la mayor cantidad de mediciones que haremos
+        local MaximoMedidasLocal = MaximoMedidas
+        
+        --Si estamos en un goal point hacemos mas mediciones ya que queremos priorizar aun mas la precision
+        if VerificacionWaypointGoalpoint(WaypointActual) then
+            MaximoMedidasLocal = MaximoMedidasGoal
         end
 
-        --print("turret target", turretAngleTarget, "turret current", sim.getJointPosition(turretMotor))
-        if numberOfMeasurements == maxMeasurements then
-            -- Finished all measurements
+        --Si ya realizamos todas las mediciones
+        if contadorMedidas == MaximoMedidasLocal then
 
-            -- Combined measurement update
+            -- Actualizamos las particulas 
             updateParticlesAfterMeasurement(distanceMeasurements, turretAngleRads)
             distanceMeasurements = {}
             turretAngleRads = {}
-
-            -- Reset turret
+            
             turretAngleTarget = 0
-            sim.setObjectInt32Param(turretMotor, sim.jointintparam_ctrl_enabled, 1) -- Put in position control mode
+            
+            --Ponemos la posicion de la torreta hacia el frente
+            --El motor tratara de mover la torreta a un angulo especifico
+            sim.setObjectInt32Param(turretMotor, sim.jointintparam_ctrl_enabled, 1) -- position control mode
+            --Especificamos la posicion deseada
             sim.setJointTargetPosition(turretMotor, turretAngleTarget)
-            turretAngleTarget = -2 * math.pi
 
-            -- Check if need to set starting location
-            if startingWaypoint == -1 then
-                startingGoal = getClosestGoalFromCoordinates(pointEstimateX(), pointEstimateY())
-                startingWaypoint = goalToWaypointMapping[startingGoal]
-                currentWaypoint = startingWaypoint
-                print("Starting waypoint is:", startingWaypoint)
+            
+            
+            -- Llenamos la primera posicion si es que no esta escogida
+            if WaypointInicial == -1 then
+                --definimos el goal inicial como el goal que se encuentre mas cerca a las medias de los arrays x y
+                GoalInicial = GoalMasCercano(median(xArray), median(yArray))
+                --asignamos el waypoint inicial usando el goal inicial como indice 
+                WaypointInicial = IndicesWaypointRuta[GoalInicial]
+                WaypointActual = WaypointInicial
+                print("Starting waypoint:", GoalInicial)
             end
 
-            numberOfMeasurements = 0
+            contadorMedidas = 0
             stepCompletedFlag = true
         else
-            -- Rotate turret
+            -- Rotar torreta
             sim.setJointTargetPosition(turretMotor, turretAngleTarget)
-            sim.setObjectInt32Param(turretMotor, sim.jointintparam_ctrl_enabled, 0) -- Put in velocity control mode
-            sim.setJointTargetVelocity(turretMotor, 15)
+            sim.setObjectInt32Param(turretMotor, sim.jointintparam_ctrl_enabled, 0) -- velocity control mode
+            sim.setJointTargetVelocity(turretMotor, 15) --hacemos que avance a 15 radianes por segundo
             --sim.setJointTargetPosition(turretMotor, turretAngleTarget)
             
             
-            -- Take measurement
             local turretAngleCurrent = sim.getJointPosition(turretMotor)
             local result, cleanDistance = sim.readProximitySensor(turretSensor)
             if result > 0 then
@@ -1011,7 +997,7 @@ function sysCall_actuation()
 
             turretAngleTarget = turretAngleTarget + turretAngleDeltaRad
 
-            numberOfMeasurements = numberOfMeasurements + 1
+            contadorMedidas = contadorMedidas + 1
         end
     end
 
