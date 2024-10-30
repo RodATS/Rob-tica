@@ -17,9 +17,9 @@ puntos = {
 
     'F': (2,2), #Top right goal
     'G': (1.5,1.5),
-    'H': (1,1),
+    'H': (1,1), 
     'I': (0,0), #Centre goal
-    'J': (1,1),
+    'J': (1,1), #REPITE
 
     'K': (0.5,1.5),
     'L': (-0.5, 2),
@@ -42,11 +42,29 @@ puntos = {
 
 # Conexiones o aristas entre puntos
 conexiones = {
-    'A': ['B', 'C'],
-    'B': ['A', 'D'],
-    'C': ['A', 'D', 'E'],
-    'D': ['B', 'C', 'E'],
-    'E': ['C', 'D']
+    'A': ['B'],
+    'B': ['C'],
+    'C': ['D'],
+    'D': ['E'],
+    'E': ['F'],
+
+    'F': ['B'],
+    'G': ['C'],
+    'H': ['D'],
+    'I': ['E'],
+    'J': ['F'],
+
+    'K': ['B'],
+    'L': ['C'],
+    'M': ['D'],
+    'N': ['E'],
+    'O': ['F'],
+
+    'P': ['B'],
+    'Q': ['C'],
+    'R': ['D'],
+    'S': ['E'],
+    'T': ['F'],
 }
 
 # Función para calcular la distancia entre dos puntos
