@@ -796,8 +796,7 @@ function sysCall_actuation()
             local deltaX = goalX - currentX
             local deltaY = goalY - currentY
             
-            -- Lua math.atan implementa atan2(dy,dx)
-            local absoluteAngleToGoal = math.atan(deltaY, deltaX)
+            local absoluteAngleToGoal = math.atan2(deltaY, deltaX)
             local deltaTheta = absoluteAngleToGoal - currentTheta
             
             -- -pi < deltaTheta <= pi 
