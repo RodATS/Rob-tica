@@ -256,7 +256,7 @@ function sysCall_init()
     stepList[7] = {"repeat"}
 
     -- Waypoints
-    N_WAYPOINTS = 15
+    N_WAYPOINTS = 22
     startingWaypoint = -1 -- Waypoint at which we start and end (determined after first measurement)
     currentWaypoint = -1
     passedStartingWaypoint = false -- Used to differentiate start from end
@@ -309,20 +309,27 @@ function sysCall_init()
     
     --NUevos waypoints:
     waypoints[1] = {2,-2} -- Bottom right goal
-    waypoints[2] = {2,2} -- Top right goal
-    waypoints[3] = {1.5,2}
-    waypoints[4] = {0,0} -- Centre goal
-    waypoints[5] = {1.5,2}
-    waypoints[6] = {-0.5, 2}
-    waypoints[7] = {-2,0.5}
-    waypoints[8] = {-2,2} -- Top left goal
-    waypoints[9] = {-2,0.5}
-    waypoints[10] = {-2,-1} -- Bottom left goal
-    waypoints[11] = {-1,-1.5}
-    waypoints[12] = {-1.5,-1.75}
-    waypoints[13] = {-2,-2}
-    waypoints[14] = {-1.75,-2.3}
-    waypoints[15] = {2,-2.3}
+    waypoints[2] = {2,-1}
+    waypoints[3] = {2,-0.5}
+    waypoints[4] = {2,0}
+    waypoints[5] = {2,2} -- Top right goal
+    waypoints[6] = {1.5,2}
+    waypoints[7] = {0,0} -- Centre goal
+    waypoints[8] = {1,1}
+    waypoints[9] = {1.5,2}
+    waypoints[10] = {-0.5, 2}
+    waypoints[11] = {-2,0.5}
+    waypoints[12] = {-2,2} -- Top left goal
+    waypoints[13] = {-2,0.5}
+    waypoints[14] = {-2,-1} -- Bottom left goal
+    waypoints[15] = {-1,-1.5}
+    waypoints[16] = {-1.5,-1.75}
+    waypoints[17] = {-2,-2}
+    waypoints[18] = {-1.75,-2.25}
+    waypoints[19] = {-0.5,-2.25}
+    waypoints[20] = {1,-2.25}
+    waypoints[21] = {1.5,-2.25}
+    waypoints[22] = {2,-2.25}
     ----------------
 
     -- Used to find waypoint associated with a goal
@@ -335,11 +342,11 @@ function sysCall_init()
     
     -- Used to find waypoint associated with a goal
     goalToWaypointMapping = {}
-    goalToWaypointMapping[1] = 4 -- (0, 0)
-    goalToWaypointMapping[2] = 8 -- (-2, 2)
+    goalToWaypointMapping[1] = 7 -- (0, 0)
+    goalToWaypointMapping[2] = 12 -- (-2, 2)
     goalToWaypointMapping[3] = 1 -- (2, -2)
-    goalToWaypointMapping[4] = 2 -- (2, 2)
-    goalToWaypointMapping[5] = 10 -- (-2, -1)
+    goalToWaypointMapping[4] = 5 -- (2, 2)
+    goalToWaypointMapping[5] = 14 -- (-2, -1)
 
     -- Determines the difference between consequtive angles that the turret
     -- is rotated to during the measurement step (rotated -pi to pi)
